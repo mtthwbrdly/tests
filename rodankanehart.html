@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Split Screen Asynchronous Sliders</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css" />
+
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      font-family: sans-serif;
+      overflow: hidden;
+    }
+
+    .split-screen {
+      display: flex;
+      width: 100%;
+      height: 100vh;
+    }
+
+    .slider {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .swiper-slide {
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      color: white;
+      font-weight: 600;
+      position: relative;
+    }
+
+    .swiper-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+        .overlay-wrapper {
+        z-index: 99;
+        position: absolute;
+        inset: 0;                
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20%;             
+        box-sizing: border-box;  
+        }
+
+        .overlay-image {
+        width: 100%;
+        height: 100%;
+        max-height: 50vh;
+        object-fit: contain;    
+        }
+
+
+    .button-wrapper {
+     position: absolute;
+      top: 50%;
+      left: 50%; 
+      transform: translate(-50%, 50%); 
+      z-index: 10;
+    }
+
+    button#nextSlide {
+      padding: 2px 8px;
+      font-size: 18px;
+      cursor: pointer;
+      border: none;
+      background: rgb(32, 31, 31);
+      color: white;
+      transition: all 0.25s ease-in-out;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.75em;
+      text-transform: uppercase;
+    }
+
+    button#nextSlide:active {
+      background: rgb(0, 0, 0);
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="split-screen">
+    <div class="slider slider-left swiper">
+      <div class="swiper-wrapper">
+        <div class="swiper-slide">
+            <img class="swiper-image" src="https://www.dropbox.com/scl/fi/wkpibbnh3m2ep1kx9a25c/Scan-12_Left.jpg?rlkey=3s9kejt9u9srz1rvutfwg973t&dl=1" alt=""></div>
+        <div class="swiper-slide">
+                <div class="overlay-wrapper">
+                    <img class="overlay-image" src="https://freight.cargo.site/w/900/q/75/i/b38123784d17bcc806b85dce9a83475c6b71fc28e896bce2461df81e6b2f5572/APARTMENT-GALLERY_HR_95.jpg" alt="">
+                </div>
+            <img class="swiper-image" src="https://www.dropbox.com/scl/fi/0vknu1likjkrcppvbl08v/Scan-1_Left.jpg?rlkey=oxamelffrnyt9l9zhibq5aqki&dl=1" alt=""></div>
+        <div class="swiper-slide">
+            <img class="swiper-image" src="https://www.dropbox.com/scl/fi/o3ldsynhw3mrpoq8onz71/Scan-3_Left.jpg?rlkey=qliwbppm46hntk9kv3h2drzym&dl=1" alt=""></div>
+        <div class="swiper-slide">
+            <img class="swiper-image" src="https://www.dropbox.com/scl/fi/gd7e6kmoxz4t4dkjbf0qf/Scan-4_Left.jpg?rlkey=il4r8j6s6g84rk0mnq6s9rbvh&dl=1" alt=""></div>
+      </div>
+    </div>
+
+    <div class="slider slider-right swiper">
+      <div class="swiper-wrapper">
+        <div class="swiper-slide">
+            <img class="swiper-image" src="https://www.dropbox.com/scl/fi/oitwc5jo3c3t6o6od6qir/Scan-12_Right.jpg?rlkey=wni5l7brinkou0p0j1i723nsc&dl=1" alt=""></div>
+        <div class="swiper-slide">
+            <img class="swiper-image" src="https://www.dropbox.com/scl/fi/ft1k2eb0bftu1rug29xt9/Scan-1_Right.jpg?rlkey=g6w85fcpjdflyoyggy4j85spr&dl=1" alt=""></div>
+        <div class="swiper-slide">
+            <img class="swiper-image" src="https://www.dropbox.com/scl/fi/7sex095a86zjhitarbf4g/Scan-3_Right.jpg?rlkey=4jc5i1bs1xas5pfoiqipjrcdg&dl=1" alt=""></div>
+        <div class="swiper-slide">
+            <img class="swiper-image" src="https://freight.cargo.site/w/1500/q/75/i/c43eb302d21162acf6d55175a9b763f156ea45ec2651a8af00537dc9d54b9eca/RODAN_LR_09.jpg" alt="">
+      </div>
+    </div>
+  </div>
+
+  <div class="button-wrapper">
+  <button id="nextSlide">Rodan Kane Hart</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
+  <script>
+  const leftSlider = new Swiper('.slider-left', {
+    effect: 'fade',
+    speed: 0,
+    loop: true,
+    allowTouchMove: false,
+    fadeEffect: { crossFade: true }
+  });
+
+  const rightSlider = new Swiper('.slider-right', {
+    effect: 'fade',
+    speed: 0,
+    loop: true,
+    allowTouchMove: false,
+    fadeEffect: { crossFade: true }
+  });
+
+  const pattern = [
+    'right', 'both', 'left', 'both', 'right', 
+    'both', 'right', 'left', 'both', 'left'
+  ];
+  let patternIndex = 0;
+
+  document.getElementById('nextSlide').addEventListener('click', () => {
+    const action = pattern[patternIndex % pattern.length];
+
+    switch (action) {
+      case 'right':
+        rightSlider.slideNext();
+        break;
+      case 'left':
+        leftSlider.slideNext();
+        break;
+      case 'both':
+        leftSlider.slideNext();
+        rightSlider.slideNext();
+        break;
+    }
+
+    patternIndex++;
+  });
+
+  document.querySelector('.slider-right').addEventListener('click', () => {
+    leftSlider.slideNext();
+    rightSlider.slideNext();
+  });
+
+  document.querySelector('.slider-left').addEventListener('click', () => {
+    leftSlider.slidePrev();
+    rightSlider.slidePrev();
+  });
+
+
+// Make overlay image draggable (without resizing)
+const overlayImage = document.querySelector('.overlay-image');
+let isDragging = false;
+let startX, startY, currentX = 0, currentY = 0;
+
+if (overlayImage) {
+  overlayImage.style.cursor = 'grab';
+  overlayImage.style.position = 'absolute';
+  overlayImage.style.transform = 'translate3d(0, 0, 0)';
+
+  overlayImage.addEventListener('mousedown', (e) => {
+    e.stopPropagation();
+    isDragging = true;
+    overlayImage.style.cursor = 'grabbing';
+    startX = e.clientX - currentX;
+    startY = e.clientY - currentY;
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    currentX = e.clientX - startX;
+    currentY = e.clientY - startY;
+    overlayImage.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      overlayImage.style.cursor = 'grab';
+    }
+  });
+
+  overlayImage.addEventListener('click', (e) => e.stopPropagation());
+}
+</script>
+
+</body>
+</html>
