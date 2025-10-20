@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rodan Kane Hart</title>
+  <title>Split Screen Asynchronous Sliders</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css" />
 
   <style>
@@ -86,6 +86,29 @@
       background: rgb(0, 0, 0);
     }
 
+    @media (max-width: 969px) {
+      .split-screen {
+        flex-direction: column;
+      }
+
+      .slider-left {
+        display: none;
+      }
+
+      .slider-right {
+        flex: 1;
+        width: 100%;
+      }
+
+      .slider-right .swiper-slide {
+        height: 100vh;
+      }
+
+      .button-wrapper {
+        top: 50%;
+        transform: translateX(-50%);
+      }
+    }
   </style>
 </head>
 <body>
@@ -214,6 +237,19 @@ if (overlayImage) {
 
   overlayImage.addEventListener('click', (e) => e.stopPropagation());
 }
+
+// Responsive Swiper logic for switching slider interaction on small screens
+function handleResponsiveSwiper() {
+  if (window.innerWidth < 969) {
+    // Only right slider visible and interactive
+    leftSlider.disable();
+  } else {
+    leftSlider.enable();
+  }
+}
+
+window.addEventListener('resize', handleResponsiveSwiper);
+window.addEventListener('load', handleResponsiveSwiper);
 </script>
 
 </body>
