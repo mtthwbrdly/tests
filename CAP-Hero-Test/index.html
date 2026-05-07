@@ -31,6 +31,7 @@
     --hairline: rgba(0,0,0,0.08);
     --nav-bg: rgba(255,255,255,0.86);
     --room-filter: none;
+    --scene-image-filter: none;
     --pad-x: clamp(20px, 3.3vw, 48px);
     --nav-h: 76px;
     /* Frame coordinates inside the room image (% of image width/height) */
@@ -63,6 +64,7 @@
     --hairline: rgba(255,255,255,0.10);
     --nav-bg: rgba(26,24,20,0.78);
     --room-filter: brightness(0.78) contrast(1.06) saturate(0.9) hue-rotate(-6deg);
+    --scene-image-filter: brightness(0.88) saturate(0.92);
   }
   html[data-mood="ochre"] {
     --ink: #2a221a;
@@ -278,6 +280,8 @@
     height: 100%;
     display: block;
     object-fit: contain;
+    filter: var(--scene-image-filter);
+    transition: filter .8s ease;
     user-select: none;
     -webkit-user-drag: none;
   }
@@ -295,6 +299,8 @@
     height: 100%;
     object-fit: cover;
     display: block;
+    filter: var(--scene-image-filter);
+    transition: filter .8s ease;
     user-select: none;
     -webkit-user-drag: none;
   }
@@ -342,6 +348,10 @@
     pointer-events: none;
   }
   .room .bg { z-index: 1; }
+  .room > .layer {
+    filter: var(--scene-image-filter);
+    transition: filter .8s ease;
+  }
   /* Side artworks, plant - all share the same 4344x2896 canvas, so they auto-align */
   .room .left-art  { z-index: 2; opacity: 0; }
   .room .right-art { z-index: 2; opacity: 0; }
@@ -536,7 +546,7 @@
 
 <section class="interior" id="interior">
   <div class="room" id="room">
-    <img class="bg"          src="assets/background.jpg"   alt="A sunlit loft interior with empty picture frames on the wall" />
+    <img class="bg" id="roomBg" src="assets/background.jpg" alt="A loft interior with empty picture frames on the wall" />
     <img class="layer left-art"  id="leftArt"  src="assets/left-artwork.png"  alt="" />
     <img class="layer right-art" id="rightArt" src="assets/right-artwork.png" alt="" />
     <!-- The final, baked-in hero artwork that takes over once the animation finishes.
@@ -565,11 +575,19 @@
   const root = document.documentElement;
   const themeToggle = document.getElementById('themeToggle');
   const themeToggleLabel = themeToggle?.querySelector('.theme-toggle-label');
+  const roomBg = document.getElementById('roomBg');
   const THEME_STORAGE_KEY = 'cap-theme-mode';
+  const ROOM_BACKGROUNDS = {
+    light: 'assets/background.jpg',
+    dark: 'assets/background-dark.jpg',
+  };
 
   function applyMood(mode) {
     if (mode === 'dark') root.setAttribute('data-mood', 'twilight');
     else root.removeAttribute('data-mood');
+    if (roomBg) {
+      roomBg.src = mode === 'dark' ? ROOM_BACKGROUNDS.dark : ROOM_BACKGROUNDS.light;
+    }
     if (themeToggle) {
       const isDark = mode === 'dark';
       themeToggle.setAttribute('aria-pressed', String(isDark));
@@ -860,6 +878,19 @@
     renderArtTransform();
   }
 
+  function syncSceneLayout() {
+    computeRects();
+    syncPlantOverlay();
+    if (artDocked) {
+      art.style.left = `${anchor.offsetLeft}px`;
+      art.style.top = `${anchor.offsetTop}px`;
+      art.style.width = `${anchor.offsetWidth}px`;
+      art.style.height = `${anchor.offsetHeight}px`;
+      return;
+    }
+    setArtAt(currentArtProgress);
+  }
+
   // Wait for room image to load so the anchor's top is correct
   const bg = room.querySelector('.bg');
   if (bg.complete) init();
@@ -872,24 +903,14 @@
     rafQueued = true;
     requestAnimationFrame(() => {
       rafQueued = false;
-      computeRects();
-      syncPlantOverlay();
-      if (artDocked) {
-        art.style.left = `${anchor.offsetLeft}px`;
-        art.style.top = `${anchor.offsetTop}px`;
-        art.style.width = `${anchor.offsetWidth}px`;
-        art.style.height = `${anchor.offsetHeight}px`;
-      }
-      // If we're not in the pinned section, repaint the start position
-      const st = ScrollTrigger.getAll().find(t => t.pin);
-      if (!st || st.progress <= 0) setArtAt(0);
-      else if (st.progress >= 1) setArtAt(1);
-      else setArtAt(st.progress);
       ScrollTrigger.refresh();
     });
   }
+  ScrollTrigger.addEventListener('refreshInit', syncSceneLayout);
+  ScrollTrigger.addEventListener('refresh', syncSceneLayout);
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', onResize);
+  window.visualViewport?.addEventListener('resize', onResize);
 
   // ─── Tweak-driven motion config ──────────────────────────
   // These get mutated by the Tweaks panel; ScrollTriggers are rebuilt when cinema changes.
