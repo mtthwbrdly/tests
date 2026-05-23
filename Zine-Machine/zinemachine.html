@@ -383,8 +383,17 @@
 
     .thumb-grid {
       display: grid;
+      gap: 10px;
+    }
+
+    .thumb-row {
+      display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
+    }
+
+    .thumb-row--single {
+      grid-template-columns: 1fr;
     }
 
     .thumb {
@@ -534,14 +543,14 @@
       }
 
       .viewer-shell {
-        min-height: 58vh;
+        min-height: 100vh;
       }
 
       .viewer {
         position: relative;
         inset: auto;
         width: 100%;
-        min-height: 58vh;
+        min-height: 100xwvh;
       }
 
       .booklet-panel {
@@ -572,10 +581,6 @@
 
       .booklet-panel {
         padding: 12px;
-      }
-
-      .thumb-grid {
-        grid-template-columns: 1fr 1fr;
       }
 
       .buttons,
@@ -812,6 +817,14 @@
       manualTargetIndex: null,
       controlsCollapsed: false
     };
+
+    const THUMB_ROWS = [
+      [0],
+      [1, 2],
+      [3, 4],
+      [5, 6],
+      [7]
+    ];
 
     // camera capture logic
     function syncLabels() {
@@ -1169,48 +1182,56 @@
 
       thumbGrid.innerHTML = "";
 
-      zineState.pages.forEach((page, index) => {
-        const item = document.createElement("button");
-        item.type = "button";
-        item.className = "thumb";
-        item.dataset.index = String(index);
-        item.setAttribute("aria-label", `Select ${PAGE_LABELS[index]}`);
+      THUMB_ROWS.forEach((rowIndexes) => {
+        const row = document.createElement("div");
+        row.className = `thumb-row${rowIndexes.length === 1 ? " thumb-row--single" : ""}`;
 
-        if (index === zineState.selectedPageIndex) {
-          item.classList.add("is-selected");
-        }
+        rowIndexes.forEach((index) => {
+          const page = zineState.pages[index];
+          const item = document.createElement("button");
+          item.type = "button";
+          item.className = "thumb";
+          item.dataset.index = String(index);
+          item.setAttribute("aria-label", `Select ${PAGE_LABELS[index]}`);
 
-        if (index === targetIndex) {
-          item.classList.add("is-targeted");
-        }
+          if (index === zineState.selectedPageIndex) {
+            item.classList.add("is-selected");
+          }
 
-        const figure = document.createElement("div");
-        figure.className = "thumb-figure";
+          if (index === targetIndex) {
+            item.classList.add("is-targeted");
+          }
 
-        if (page.image) {
-          const img = document.createElement("img");
-          img.src = page.image;
-          img.alt = PAGE_LABELS[index];
-          figure.appendChild(img);
-        } else {
-          const placeholder = document.createElement("div");
-          placeholder.className = "thumb-placeholder";
-          placeholder.textContent = "Empty Page";
-          figure.appendChild(placeholder);
-        }
+          const figure = document.createElement("div");
+          figure.className = "thumb-figure";
 
-        const meta = document.createElement("div");
-        meta.className = "thumb-meta";
-        meta.innerHTML = `
-          <div class="thumb-index">Page ${index + 1} of 8</div>
-          <div class="thumb-label">${PAGE_LABELS[index]}</div>
-        `;
+          if (page.image) {
+            const img = document.createElement("img");
+            img.src = page.image;
+            img.alt = PAGE_LABELS[index];
+            figure.appendChild(img);
+          } else {
+            const placeholder = document.createElement("div");
+            placeholder.className = "thumb-placeholder";
+            placeholder.textContent = "Empty Page";
+            figure.appendChild(placeholder);
+          }
 
-        item.appendChild(figure);
-        item.appendChild(meta);
-        item.addEventListener("click", () => setSelectedPage(index, { manual: true }));
-        attachDragHandlers(item, index);
-        thumbGrid.appendChild(item);
+          const meta = document.createElement("div");
+          meta.className = "thumb-meta";
+          meta.innerHTML = `
+            <div class="thumb-index">Page ${index + 1} of 8</div>
+            <div class="thumb-label">${PAGE_LABELS[index]}</div>
+          `;
+
+          item.appendChild(figure);
+          item.appendChild(meta);
+          item.addEventListener("click", () => setSelectedPage(index, { manual: true }));
+          attachDragHandlers(item, index);
+          row.appendChild(item);
+        });
+
+        thumbGrid.appendChild(row);
       });
 
       selectedPageIndex.textContent = `Page ${zineState.selectedPageIndex + 1}`;
