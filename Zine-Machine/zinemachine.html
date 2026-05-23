@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zine Machine</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    :root {
+      --stamp-color: #d40000;
+      --stamp-font-weight: bold;
+      --stamp-font-family: "Courier New", Courier, monospace;
+      --stamp-size-scale: 0.01;
+      --panel-bg: linear-gradient(180deg, #fcfcfc 0%, #d6d6d6 100%);
+      --button-bg: linear-gradient(180deg, #ffffff 0%, #bdbdbd 100%);
+      --button-active: linear-gradient(180deg, #bdbdbd 0%, #ffffff 100%);
+      --line: #7b7b7b;
+      --paper: #efefef;
+      --ink: #101010;
+      --accent: #d40000;
+      --shadow: rgba(0, 0, 0, 0.22);
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.12), transparent 35%),
+        linear-gradient(180deg, #111 0%, #000 100%);
+      color: var(--ink);
+      font-family: "Courier New", Courier, monospace;
+      font-stretch: condensed;
+    }
+
+    body {
+      overflow: hidden;
+    }
+
+    button,
+    input,
+    label,
+    select {
+      font: inherit;
+    }
+
+    .page {
+      position: relative;
+      min-height: 100vh;
+    }
+
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 20;
+      padding: 16px 20px;
+      pointer-events: none;
+      mix-blend-mode: difference;
+      font-family: "Arial Narrow", Arial, sans-serif;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 10vw, 66px);
+      line-height: 0.88;
+      font-weight: bold;
+      letter-spacing: -0.06rem;
+      color: #fff;
+      text-transform: uppercase;
+    }
+
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      min-height: 100vh;
+    }
+
+    .viewer-shell {
+      position: relative;
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    .viewer {
+      position: fixed;
+      inset: 0 320px 0 0;
+      width: auto;
+      overflow: hidden;
+      background: #000;
+      touch-action: manipulation;
+    }
+
+    video {
+      display: none;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+
+    .guide-frame {
+      position: absolute;
+      inset: 5%;
+      pointer-events: none;
+      display: none;
+      border: 1px dashed rgba(0, 0, 0, 0.75);
+    }
+
+    .guide-frame.is-visible {
+      display: block;
+    }
+
+    .guide-frame::before,
+    .guide-frame::after {
+      content: "";
+      position: absolute;
+      background: repeating-linear-gradient(
+        90deg,
+        rgba(0, 0, 0, 0.75) 0 12px,
+        transparent 12px 24px
+      );
+    }
+
+    .guide-frame::before {
+      left: 0;
+      right: 0;
+      top: 50%;
+      height: 1px;
+    }
+
+    .guide-frame::after {
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 1px;
+      background: repeating-linear-gradient(
+        180deg,
+        rgba(0, 0, 0, 0.75) 0 12px,
+        transparent 12px 24px
+      );
+    }
+
+    .date-stamp {
+      display: none;
+    }
+
+    .capture-hud {
+      padding: 12px 14px;
+      border: 1px solid #8e8e8e;
+      border-radius: 0px;
+      background: rgba(255, 255, 255, 0.84);
+      font-family: "Courier New", Courier, monospace;
+    }
+
+    .capture-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .capture-line strong {
+      font-size: 12px;
+      line-height: 1.1;
+      text-transform: none;
+    }
+
+    .capture-note {
+      margin-top: 6px;
+      font-size: 11px;
+      color: #3d3d3d;
+    }
+
+    .booklet-panel {
+      position: relative;
+      z-index: 10;
+      margin-left: auto;
+      width: 320px;
+      min-height: 100vh;
+      max-height: 100vh;
+      overflow-y: auto;
+      padding: 16px;
+      border-left: 1px solid var(--line);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent 80px),
+        var(--panel-bg);
+      box-shadow: inset 8px 0 18px rgba(255, 255, 255, 0.1);
+      display: grid;
+      gap: 14px;
+      align-content: start;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 12px;
+    }
+
+    .control-panel {
+      position: fixed;
+      left: 50%;
+      bottom: 1rem;
+      z-index: 18;
+      width: min(360px, calc(100vw - 32px));
+      max-height: min(62vh, 720px);
+      overflow: hidden;
+      border-radius: 0px;
+      background: white;
+      display: grid;
+      transform: translateX(-50%)
+    }
+
+    .control-panel.is-collapsed .control-panel-body {
+      display: none;
+    }
+
+    .control-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 12px;
+      border-bottom: 1px dashed #9f9f9f;
+      font-family: "Courier New", Courier, monospace;
+    }
+
+    .control-panel.is-collapsed .control-panel-header {
+      border-bottom: 0;
+    }
+
+    .control-panel-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .control-panel-toggle {
+      min-height: 34px;
+      padding: 7px 10px;
+      font-size: 11px;
+    }
+
+    .control-panel-header #captureBtn {
+      min-height: 34px;
+      width: auto;
+      padding: 7px 16px;
+      font-size: 1rem;
+    }
+
+    .control-panel-body {
+      max-height: min(52vh, 620px);
+      overflow-y: auto;
+      padding: 14px;
+      display: grid;
+      gap: 14px;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 12px;
+    }
+
+    .section-title {
+      margin: 0 0 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed #9f9f9f;
+      font-size: clamp(28px, 5vw, 40px);
+      letter-spacing: -0.025em;
+      text-transform: uppercase;
+      font-family: "Arial Narrow", Arial, sans-serif;
+    }
+
+    .buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .buttons--stack {
+      display: flex;
+      font-size: 12px;
+    }
+
+    button {
+      min-height: 44px;
+      padding: 10px 12px;
+      border: 1px solid var(--ink);
+      border-radius: 0px;
+      background: var(--button-bg);
+      color: var(--ink);
+      cursor: pointer;
+      text-transform: uppercase;
+      font-family: "Arial Narrow", Arial, sans-serif;
+      font-weight: bold;
+      font-size: 1.25rem;
+      line-height: 1;
+      letter-spacing: 0.02em;
+    }
+
+    button:active {
+      background: var(--button-active);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    #captureBtn {
+      background: #ff0000;
+      color: #fff;
+      width: 100%;
+    }
+
+    #downloadBtn {
+      background: var(--ink);
+      color: white;
+    }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+    }
+
+    .control {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px 12px;
+      align-items: center;
+      padding-bottom: 9px;
+      border-bottom: 1px dashed #a5a5a5;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .control input[type="range"] {
+      grid-column: 1 / -1;
+      width: 100%;
+      accent-color: var(--ink);
+    }
+
+    .switch {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 9px;
+      border-bottom: 1px dashed #a5a5a5;
+    }
+
+    .switch input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--ink);
+    }
+
+    .status {
+      line-height: 1.35;
+      color: white;
+      font-weight: bold;
+      background-color: red;
+      padding: 10px 15px;
+      text-align: center;
+    }
+
+    .booklet {
+      display: grid;
+      gap: 10px;
+    }
+
+    .booklet-tools {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .booklet-tools button {
+      font-size: 14px!important;
+    }
+
+    .thumb-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .thumb {
+      position: relative;
+      background: linear-gradient(180deg, #f5f5f5, #d0d0d0);
+      border-radius: 0px;
+      padding: 8px;
+      display: grid;
+      gap: 8px;
+      user-select: none;
+      touch-action: none;
+      box-shadow: 0 5px 14px rgba(0, 0, 0, 0.08);
+    }
+
+    .thumb.is-selected {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+
+    .thumb.is-targeted::after {
+      content: "Next";
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #111;
+      color: #fff;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .thumb.is-dragging {
+      opacity: 0.55;
+      transform: scale(0.98);
+    }
+
+    .thumb-figure {
+      aspect-ratio: 1 / 1.4142;
+      border: 1px dashed #858585;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, #fbfbfb, #e9e9e9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      filter: contrast(1.02);
+    }
+
+    .thumb-placeholder {
+      padding: 10px;
+      text-align: center;
+      color: #5f5f5f;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .thumb-meta {
+      display: grid;
+      gap: 2px;
+    }
+
+    .thumb-index {
+      font-size: 10px;
+      text-transform: uppercase;
+      color: #616161;
+    }
+
+    .thumb-label {
+      font-family: "Times New Roman", Times, serif;
+      font-size: 15px;
+      line-height: 1.05;
+      min-height: 2.1em;
+    }
+
+    .thumb-note {
+      font-size: 10px;
+      color: #5b5b5b;
+      text-transform: uppercase;
+    }
+
+    .preview-card {
+      display: grid;
+      gap: 10px;
+      padding: 10px;
+      border: 1px solid #7d7d7d;
+      border-radius: 0px;
+      background: rgba(255, 255, 255, 0.45);
+    }
+
+    .preview-canvas {
+      aspect-ratio: 1 / 1.4142;
+      border: 1px dashed #7d7d7d;
+      background: var(--paper);
+      overflow: hidden;
+    }
+
+    .preview-canvas img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+
+    .preview-empty {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 18px;
+      color: #636363;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+
+    .hidden-buffer {
+      display: none;
+    }
+
+    @media (max-width: 980px) {
+      body {
+        overflow: auto;
+      }
+
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .viewer-shell {
+        min-height: 58vh;
+      }
+
+      .viewer {
+        position: relative;
+        inset: auto;
+        width: 100%;
+        min-height: 58vh;
+      }
+
+      .booklet-panel {
+        width: 100%;
+        min-height: auto;
+        max-height: none;
+        border-left: 0;
+        border-top: 1px solid var(--line);
+        margin-left: 0;
+        padding-top: 14px;
+      }
+
+      .control-panel {
+        left: 14px;
+        bottom: 14px;
+        width: min(320px, calc(100vw - 28px));
+        max-height: 56vh;
+      }
+    }
+
+    @media (max-width: 620px) {
+      header {
+        padding: 12px 14px;
+      }
+
+      .subtitle {
+        font-size: 10px;
+      }
+
+      .booklet-panel {
+        padding: 12px;
+      }
+
+      .thumb-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .buttons,
+      .booklet-tools {
+       display: flex;
+      }
+
+      .capture-line {
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .control-panel {
+        width: calc(100vw - 24px);
+        left: 12px;
+        bottom: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <h1>COPY THAT</h1>
+    </header>
+
+    <section class="workspace">
+      <div class="viewer-shell">
+        <div class="viewer" id="viewer">
+          <video id="video" playsinline autoplay muted></video>
+          <canvas id="output"></canvas>
+          <div class="guide-frame" id="guideFrame"></div>
+          <div class="date-stamp" id="dateStamp"></div>
+        </div>
+
+      </div>
+
+      <aside class="booklet-panel">
+
+
+                      <section>
+          <h2 class="section-title">ZINE MAKER</h2>
+          </div>
+          
+        </section>
+
+        <section class="preview-card">
+          <div class="meta-row">
+            <span id="selectedPageIndex">Page 1</span>
+            <span id="selectedPageMode">Auto target</span>
+          </div>
+          <div class="preview-canvas" id="selectedPreview"></div>
+          <div class="meta-row">
+            <span id="selectedPageLabel">Front Cover</span>
+            <span id="pageFillCount">0 / 8 filled</span>
+          </div>
+        </section>
+
+
+
+        <section class="booklet">
+          <h2 class="section-title">Pages</h2>
+          <div class="thumb-grid" id="thumbGrid" aria-label="Booklet pages"></div>
+        </section>
+
+      
+              <section>
+          <div class="buttons buttons--stack">
+            <button id="downloadBtn">Download Booklet</button>
+          <div class="booklet-tools">
+            <button id="clearPageBtn">Clear Selected</button>
+            <button id="resetBtn">Reset All</button>
+          </div>
+          </div>
+          
+        </section>
+      </aside>
+
+      <aside class="control-panel" id="controlPanel">
+        <div class="control-panel-header">
+          <div class="control-panel-actions">
+            <button id="captureBtn">SCAN</button>
+          </div>
+          
+          <button id="toggleControlsBtn" class="control-panel-toggle" type="button" aria-expanded="true">Collapse</button>
+        
+        </div>
+        <div class="control-panel-body">
+          <section class="capture-hud" aria-live="polite">
+            <div class="capture-line">
+              <span>Capturing</span>
+              <span id="captureTargetText">Page 1 of 8</span>
+            </div>
+            <div class="capture-note" id="captureTargetNote">
+              Front Cover is next in sequence.
+            </div>
+            
+
+          </section>
+<div class="status" id="status">Requesting camera access. Use HTTPS or localhost if prompted.</div>
+          <section class="controls">
+            <h2 class="section-title">Settings</h2>
+
+            <div class="control">
+              <label for="threshold">Threshold</label>
+              <span id="thresholdValue">128</span>
+              <input id="threshold" type="range" min="0" max="255" value="128" />
+            </div>
+
+            <div class="control">
+              <label for="contrast">Contrast</label>
+              <span id="contrastValue">80</span>
+              <input id="contrast" type="range" min="0" max="200" value="80" />
+            </div>
+
+            <div class="control">
+              <label for="noise">Noise / Grain</label>
+              <span id="noiseValue">20</span>
+              <input id="noise" type="range" min="0" max="100" value="20" />
+            </div>
+
+            <div class="control">
+              <label for="blur">Blur before threshold</label>
+              <span id="blurValue">1</span>
+              <input id="blur" type="range" min="0" max="8" value="1" step="0.5" />
+            </div>
+
+            <div class="control">
+              <label for="paperTint">Paper tint</label>
+              <span id="paperTintValue">14</span>
+              <input id="paperTint" type="range" min="0" max="80" value="14" />
+            </div>
+
+            <div class="control">
+              <label for="halftone">Halftone dots</label>
+              <span id="halftoneValue">0</span>
+              <input id="halftone" type="range" min="0" max="16" value="0" />
+            </div>
+
+            <label class="switch">
+              <span>Invert black / white</span>
+              <input id="invert" type="checkbox" />
+            </label>
+
+            <label class="switch">
+              <span>Date / time stamp</span>
+              <input id="stamp" type="checkbox" />
+            </label>
+
+            <label class="switch">
+              <span>A4 / A-series crop guides</span>
+              <input id="guides" type="checkbox" />
+            </label>
+          </section>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <canvas id="buffer" class="hidden-buffer"></canvas>
+  <canvas id="pageBuffer" class="hidden-buffer"></canvas>
+
+  <script>
+    const PAGE_LABELS = [
+      "Front Cover",
+      "Inside Front Cover",
+      "Page 3",
+      "Page 4",
+      "Page 5",
+      "Page 6",
+      "Inside Back Cover",
+      "Back Cover"
+    ];
+
+    const STORAGE_KEY = "zine-machine-state-v1";
+    const PAGE_EXPORT_WIDTH = 1240;
+    const PAGE_EXPORT_HEIGHT = 1754;
+    const PDF_PAGE_WIDTH = 420;
+    const PDF_PAGE_HEIGHT = 595;
+
+    const video = document.getElementById("video");
+    const output = document.getElementById("output");
+    const buffer = document.getElementById("buffer");
+    const pageBuffer = document.getElementById("pageBuffer");
+    const outCtx = output.getContext("2d", { willReadFrequently: true });
+    const bufCtx = buffer.getContext("2d", { willReadFrequently: true });
+    const pageCtx = pageBuffer.getContext("2d", { willReadFrequently: true });
+
+    const viewer = document.getElementById("viewer");
+    const status = document.getElementById("status");
+    const controlPanel = document.getElementById("controlPanel");
+    const toggleControlsBtn = document.getElementById("toggleControlsBtn");
+    const guideFrame = document.getElementById("guideFrame");
+    const dateStamp = document.getElementById("dateStamp");
+    const thumbGrid = document.getElementById("thumbGrid");
+    const selectedPreview = document.getElementById("selectedPreview");
+    const selectedPageIndex = document.getElementById("selectedPageIndex");
+    const selectedPageLabel = document.getElementById("selectedPageLabel");
+    const selectedPageMode = document.getElementById("selectedPageMode");
+    const pageFillCount = document.getElementById("pageFillCount");
+    const captureTargetText = document.getElementById("captureTargetText");
+    const captureTargetNote = document.getElementById("captureTargetNote");
+    const clearPageBtn = document.getElementById("clearPageBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    const controls = {
+      threshold: document.getElementById("threshold"),
+      contrast: document.getElementById("contrast"),
+      noise: document.getElementById("noise"),
+      blur: document.getElementById("blur"),
+      paperTint: document.getElementById("paperTint"),
+      halftone: document.getElementById("halftone"),
+      invert: document.getElementById("invert"),
+      stamp: document.getElementById("stamp"),
+      guides: document.getElementById("guides")
+    };
+
+    const valueLabels = {
+      threshold: document.getElementById("thresholdValue"),
+      contrast: document.getElementById("contrastValue"),
+      noise: document.getElementById("noiseValue"),
+      blur: document.getElementById("blurValue"),
+      paperTint: document.getElementById("paperTintValue"),
+      halftone: document.getElementById("halftoneValue")
+    };
+
+    let stream = null;
+    let animationId = null;
+    let dragState = null;
+
+    // zine state
+    const zineState = {
+      pages: PAGE_LABELS.map(() => ({ image: null, createdAt: null })),
+      selectedPageIndex: 0,
+      manualTargetIndex: null,
+      controlsCollapsed: false
+    };
+
+    // camera capture logic
+    function syncLabels() {
+      Object.keys(valueLabels).forEach((key) => {
+        valueLabels[key].textContent = controls[key].value;
+      });
+
+      guideFrame.classList.toggle("is-visible", controls.guides.checked);
+      persistState();
+      renderBookletUI();
+    }
+
+    function updateControlPanelUI() {
+      controlPanel.classList.toggle("is-collapsed", zineState.controlsCollapsed);
+      toggleControlsBtn.textContent = zineState.controlsCollapsed ? "Settings" : "Close";
+      toggleControlsBtn.setAttribute("aria-expanded", String(!zineState.controlsCollapsed));
+    }
+
+    function setControlsCollapsed(collapsed) {
+      zineState.controlsCollapsed = collapsed;
+      updateControlPanelUI();
+      persistState();
+    }
+
+    Object.values(controls).forEach((input) => {
+      input.addEventListener("input", syncLabels);
+      input.addEventListener("change", syncLabels);
+    });
+
+    function getSettingsSnapshot() {
+      return {
+        threshold: controls.threshold.value,
+        contrast: controls.contrast.value,
+        noise: controls.noise.value,
+        blur: controls.blur.value,
+        paperTint: controls.paperTint.value,
+        halftone: controls.halftone.value,
+        invert: controls.invert.checked,
+        stamp: controls.stamp.checked,
+        guides: controls.guides.checked
+      };
+    }
+
+    function applySettingsSnapshot(settings) {
+      if (!settings) return;
+      Object.entries(settings).forEach(([key, value]) => {
+        if (!(key in controls)) return;
+        if (controls[key].type === "checkbox") {
+          controls[key].checked = Boolean(value);
+        } else {
+          controls[key].value = value;
+        }
+      });
+    }
+
+    function fitCanvases() {
+      const rect = viewer.getBoundingClientRect();
+      const ratio = window.devicePixelRatio || 1;
+      output.width = Math.max(1, Math.floor(rect.width * ratio));
+      output.height = Math.max(1, Math.floor(rect.height * ratio));
+      buffer.width = output.width;
+      buffer.height = output.height;
+    }
+
+    function drawAFrameGuides(ctx, width, height) {
+      if (!controls.guides.checked) return;
+
+      const marginX = width * 0.05;
+      const marginY = height * 0.05;
+      const frameW = width - marginX * 2;
+      const frameH = height - marginY * 2;
+
+      ctx.save();
+      ctx.strokeStyle = controls.invert.checked ? "rgba(255,255,255,0.9)" : "rgba(0,0,0,0.9)";
+      ctx.lineWidth = Math.max(1, width / 900);
+      ctx.setLineDash([14, 12]);
+      ctx.strokeRect(marginX, marginY, frameW, frameH);
+
+      ctx.beginPath();
+      ctx.moveTo(marginX + frameW / 2, marginY);
+      ctx.lineTo(marginX + frameW / 2, marginY + frameH);
+      ctx.moveTo(marginX, marginY + frameH / 2);
+      ctx.lineTo(marginX + frameW, marginY + frameH / 2);
+      ctx.moveTo(marginX, marginY + frameH / 4);
+      ctx.lineTo(marginX + frameW, marginY + frameH / 4);
+      ctx.moveTo(marginX, marginY + frameH * 0.75);
+      ctx.lineTo(marginX + frameW, marginY + frameH * 0.75);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawStamp(ctx, width, height) {
+      if (!controls.stamp.checked) return;
+
+      const now = new Date();
+      const text = now.toLocaleString([], {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+
+      const styles = getComputedStyle(document.documentElement);
+      const stampColor = styles.getPropertyValue("--stamp-color").trim() || "#d40000";
+      const stampWeight = styles.getPropertyValue("--stamp-font-weight").trim() || "bold";
+      const stampFamily = styles.getPropertyValue("--stamp-font-family").trim() || '"Courier New", Courier, monospace';
+      const stampScale = parseFloat(styles.getPropertyValue("--stamp-size-scale")) || 0.026;
+      const fontSize = Math.max(18, width * stampScale);
+
+      ctx.save();
+      ctx.font = `${stampWeight} ${fontSize}px ${stampFamily}`;
+      ctx.fillStyle = stampColor;
+      ctx.fillText(text, width * 0.03, height * 0.95);
+      ctx.restore();
+    }
+
+    function applyHalftone(ctx, imageData, dotSize) {
+      if (dotSize <= 0) return;
+
+      const w = imageData.width;
+      const h = imageData.height;
+      const data = imageData.data;
+
+      ctx.save();
+      ctx.fillStyle = controls.invert.checked ? "#000" : "#fff";
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = controls.invert.checked ? "#fff" : "#111";
+
+      for (let y = 0; y < h; y += dotSize) {
+        for (let x = 0; x < w; x += dotSize) {
+          const i = (y * w + x) * 4;
+          const value = data[i];
+          const darkness = controls.invert.checked ? value / 255 : 1 - value / 255;
+          const radius = dotSize * 0.55 * darkness;
+
+          if (radius > 0.2) {
+            ctx.beginPath();
+            ctx.arc(x + dotSize / 2, y + dotSize / 2, radius, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+      ctx.restore();
+    }
+
+    function processFrame() {
+      if (!video.videoWidth || !video.videoHeight) {
+        animationId = requestAnimationFrame(processFrame);
+        return;
+      }
+
+      const blur = Number(controls.blur.value);
+      const threshold = Number(controls.threshold.value);
+      const contrast = Number(controls.contrast.value);
+      const noise = Number(controls.noise.value);
+      const tint = Number(controls.paperTint.value);
+      const halftone = Number(controls.halftone.value);
+      const invert = controls.invert.checked;
+
+      bufCtx.save();
+      bufCtx.filter = blur > 0 ? `blur(${blur}px)` : "none";
+      bufCtx.drawImage(video, 0, 0, buffer.width, buffer.height);
+      bufCtx.restore();
+
+      const imageData = bufCtx.getImageData(0, 0, buffer.width, buffer.height);
+      const data = imageData.data;
+      const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        let gray = 0.299 * r + 0.587 * g + 0.114 * b;
+
+        gray = factor * (gray - 128) + 128;
+        gray += (Math.random() - 0.5) * noise * 2;
+
+        let value = gray > threshold ? 255 : tint;
+        if (invert) value = value === 255 ? 0 : 255 - tint;
+
+        data[i] = value;
+        data[i + 1] = value;
+        data[i + 2] = value;
+      }
+
+      if (halftone > 0) {
+        applyHalftone(outCtx, imageData, halftone * (window.devicePixelRatio || 1));
+      } else {
+        outCtx.putImageData(imageData, 0, 0);
+      }
+
+      drawAFrameGuides(outCtx, output.width, output.height);
+      drawStamp(outCtx, output.width, output.height);
+
+      animationId = requestAnimationFrame(processFrame);
+    }
+
+    async function startCamera() {
+      try {
+        fitCanvases();
+
+        if (stream) {
+          stream.getTracks().forEach((track) => track.stop());
+        }
+
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          },
+          audio: false
+        });
+
+        video.srcObject = stream;
+        await video.play();
+
+        status.textContent = "Camera active. Duplicate pages into the next slot or your selected page.";
+        cancelAnimationFrame(animationId);
+        processFrame();
+      } catch (error) {
+        console.error(error);
+        status.textContent = "Camera blocked or unavailable. Use HTTPS, allow camera access, and try again.";
+      }
+    }
+
+    function stopCamera() {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+        stream = null;
+      }
+    }
+
+    function findNextEmptyPageIndex() {
+      return zineState.pages.findIndex((page) => !page.image);
+    }
+
+    // page assignment
+    function getCaptureTargetIndex() {
+      if (zineState.manualTargetIndex !== null) {
+        return zineState.manualTargetIndex;
+      }
+
+      const nextEmpty = findNextEmptyPageIndex();
+      if (nextEmpty !== -1) {
+        return nextEmpty;
+      }
+
+      return zineState.selectedPageIndex;
+    }
+
+    function setSelectedPage(index, { manual = false } = {}) {
+      zineState.selectedPageIndex = index;
+      if (manual) {
+        zineState.manualTargetIndex = index;
+      }
+      renderBookletUI();
+      persistState();
+    }
+
+    function createPageDataUrl() {
+      pageBuffer.width = PAGE_EXPORT_WIDTH;
+      pageBuffer.height = PAGE_EXPORT_HEIGHT;
+
+      pageCtx.save();
+      pageCtx.clearRect(0, 0, PAGE_EXPORT_WIDTH, PAGE_EXPORT_HEIGHT);
+      pageCtx.fillStyle = controls.invert.checked ? "#000000" : "#ffffff";
+      pageCtx.fillRect(0, 0, PAGE_EXPORT_WIDTH, PAGE_EXPORT_HEIGHT);
+
+      const sourceRatio = output.width / output.height;
+      const targetRatio = PAGE_EXPORT_WIDTH / PAGE_EXPORT_HEIGHT;
+      let drawWidth = PAGE_EXPORT_WIDTH;
+      let drawHeight = PAGE_EXPORT_HEIGHT;
+      let drawX = 0;
+      let drawY = 0;
+
+      if (sourceRatio > targetRatio) {
+        drawHeight = PAGE_EXPORT_HEIGHT;
+        drawWidth = drawHeight * sourceRatio;
+        drawX = (PAGE_EXPORT_WIDTH - drawWidth) / 2;
+      } else {
+        drawWidth = PAGE_EXPORT_WIDTH;
+        drawHeight = drawWidth / sourceRatio;
+        drawY = (PAGE_EXPORT_HEIGHT - drawHeight) / 2;
+      }
+
+      pageCtx.drawImage(output, drawX, drawY, drawWidth, drawHeight);
+      pageCtx.restore();
+      return pageBuffer.toDataURL("image/jpeg", 0.92);
+    }
+
+    async function capturePage() {
+      if (!stream) {
+        status.textContent = "Open the camera first.";
+        return;
+      }
+
+      const targetIndex = getCaptureTargetIndex();
+      const targetLabel = PAGE_LABELS[targetIndex];
+      const fillWasComplete = findNextEmptyPageIndex() === -1;
+      const pageImage = createPageDataUrl();
+
+      zineState.pages[targetIndex] = {
+        image: pageImage,
+        createdAt: new Date().toISOString()
+      };
+
+      zineState.selectedPageIndex = targetIndex;
+      if (!fillWasComplete && zineState.manualTargetIndex !== null) {
+        zineState.manualTargetIndex = null;
+      }
+
+      renderBookletUI();
+      persistState();
+
+      const nextEmpty = findNextEmptyPageIndex();
+      if (nextEmpty === -1) {
+        status.textContent = `${targetLabel} updated. All 8 pages are filled; Duplicate now replaces the selected page.`;
+      } else {
+        status.textContent = `${targetLabel} captured. Next empty page is ${PAGE_LABELS[nextEmpty]}.`;
+      }
+    }
+
+    // thumbnail rendering
+    function renderSelectedPreview() {
+      const page = zineState.pages[zineState.selectedPageIndex];
+      selectedPreview.innerHTML = "";
+
+      if (page.image) {
+        const img = document.createElement("img");
+        img.src = page.image;
+        img.alt = PAGE_LABELS[zineState.selectedPageIndex];
+        selectedPreview.appendChild(img);
+      } else {
+        const placeholder = document.createElement("div");
+        placeholder.className = "preview-empty";
+        placeholder.textContent = "Selected page is empty";
+        selectedPreview.appendChild(placeholder);
+      }
+    }
+
+    function getFilledCount() {
+      return zineState.pages.filter((page) => page.image).length;
+    }
+
+    function renderBookletUI() {
+      const targetIndex = getCaptureTargetIndex();
+      const filledCount = getFilledCount();
+
+      thumbGrid.innerHTML = "";
+
+      zineState.pages.forEach((page, index) => {
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "thumb";
+        item.dataset.index = String(index);
+        item.setAttribute("aria-label", `Select ${PAGE_LABELS[index]}`);
+
+        if (index === zineState.selectedPageIndex) {
+          item.classList.add("is-selected");
+        }
+
+        if (index === targetIndex) {
+          item.classList.add("is-targeted");
+        }
+
+        const figure = document.createElement("div");
+        figure.className = "thumb-figure";
+
+        if (page.image) {
+          const img = document.createElement("img");
+          img.src = page.image;
+          img.alt = PAGE_LABELS[index];
+          figure.appendChild(img);
+        } else {
+          const placeholder = document.createElement("div");
+          placeholder.className = "thumb-placeholder";
+          placeholder.textContent = "Empty Page";
+          figure.appendChild(placeholder);
+        }
+
+        const meta = document.createElement("div");
+        meta.className = "thumb-meta";
+        meta.innerHTML = `
+          <div class="thumb-index">Page ${index + 1} of 8</div>
+          <div class="thumb-label">${PAGE_LABELS[index]}</div>
+        `;
+
+        item.appendChild(figure);
+        item.appendChild(meta);
+        item.addEventListener("click", () => setSelectedPage(index, { manual: true }));
+        attachDragHandlers(item, index);
+        thumbGrid.appendChild(item);
+      });
+
+      selectedPageIndex.textContent = `Page ${zineState.selectedPageIndex + 1}`;
+      selectedPageLabel.textContent = PAGE_LABELS[zineState.selectedPageIndex];
+      selectedPageMode.textContent = zineState.manualTargetIndex === null ? "Auto target" : "Manual target";
+      pageFillCount.textContent = `${filledCount} / 8 filled`;
+      captureTargetText.textContent = `Page ${targetIndex + 1} of 8`;
+      captureTargetNote.textContent = `${PAGE_LABELS[targetIndex]} is ${zineState.manualTargetIndex === null ? "next in sequence" : "armed for replacement"}.`;
+
+      clearPageBtn.disabled = !zineState.pages[zineState.selectedPageIndex].image;
+      renderSelectedPreview();
+      updateControlPanelUI();
+    }
+
+    // page selection
+    function clearSelectedPage() {
+      const page = zineState.pages[zineState.selectedPageIndex];
+      if (!page.image) {
+        status.textContent = `${PAGE_LABELS[zineState.selectedPageIndex]} is already empty.`;
+        return;
+      }
+
+      zineState.pages[zineState.selectedPageIndex] = {
+        image: null,
+        createdAt: null
+      };
+
+      renderBookletUI();
+      persistState();
+      status.textContent = `${PAGE_LABELS[zineState.selectedPageIndex]} cleared.`;
+    }
+
+    function resetBooklet() {
+      zineState.pages = PAGE_LABELS.map(() => ({ image: null, createdAt: null }));
+      zineState.selectedPageIndex = 0;
+      zineState.manualTargetIndex = null;
+      renderBookletUI();
+      persistState();
+      status.textContent = "Booklet reset. Front Cover is ready for capture.";
+    }
+
+    function movePage(fromIndex, toIndex) {
+      if (fromIndex === toIndex || toIndex < 0 || toIndex >= zineState.pages.length) {
+        return;
+      }
+
+      const [page] = zineState.pages.splice(fromIndex, 1);
+      zineState.pages.splice(toIndex, 0, page);
+
+      if (zineState.selectedPageIndex === fromIndex) {
+        zineState.selectedPageIndex = toIndex;
+      } else if (fromIndex < zineState.selectedPageIndex && toIndex >= zineState.selectedPageIndex) {
+        zineState.selectedPageIndex -= 1;
+      } else if (fromIndex > zineState.selectedPageIndex && toIndex <= zineState.selectedPageIndex) {
+        zineState.selectedPageIndex += 1;
+      }
+
+      if (zineState.manualTargetIndex === fromIndex) {
+        zineState.manualTargetIndex = toIndex;
+      } else if (zineState.manualTargetIndex !== null) {
+        if (fromIndex < zineState.manualTargetIndex && toIndex >= zineState.manualTargetIndex) {
+          zineState.manualTargetIndex -= 1;
+        } else if (fromIndex > zineState.manualTargetIndex && toIndex <= zineState.manualTargetIndex) {
+          zineState.manualTargetIndex += 1;
+        }
+      }
+
+      renderBookletUI();
+      persistState();
+      status.textContent = "Booklet order updated for export.";
+    }
+
+    // drag-and-drop reorder
+    function attachDragHandlers(element, index) {
+      element.addEventListener("pointerdown", (event) => {
+        dragState = {
+          pointerId: event.pointerId,
+          startIndex: index,
+          activeIndex: index
+        };
+
+        element.setPointerCapture(event.pointerId);
+        element.classList.add("is-dragging");
+      });
+
+      element.addEventListener("pointermove", (event) => {
+        if (!dragState || dragState.pointerId !== event.pointerId) return;
+        const target = document.elementFromPoint(event.clientX, event.clientY);
+        const thumb = target && target.closest(".thumb");
+        if (!thumb) return;
+        const overIndex = Number(thumb.dataset.index);
+        if (!Number.isNaN(overIndex)) {
+          dragState.activeIndex = overIndex;
+        }
+      });
+
+      function finishDrag(event) {
+        if (!dragState || dragState.pointerId !== event.pointerId) return;
+        element.classList.remove("is-dragging");
+        element.releasePointerCapture(event.pointerId);
+        const { startIndex, activeIndex } = dragState;
+        dragState = null;
+        movePage(startIndex, activeIndex);
+      }
+
+      element.addEventListener("pointerup", finishDrag);
+      element.addEventListener("pointercancel", finishDrag);
+    }
+
+    // export logic
+    function dataUrlToUint8Array(dataUrl) {
+      const base64 = dataUrl.split(",")[1];
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return bytes;
+    }
+
+    function uint8ArrayToHex(bytes) {
+      let hex = "";
+      for (let i = 0; i < bytes.length; i += 1) {
+        hex += bytes[i].toString(16).padStart(2, "0");
+      }
+      return `${hex}>`;
+    }
+
+    function escapePdfString(value) {
+      return value.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+    }
+
+    function buildPdf(pages) {
+      const objects = [];
+
+      function addObject(content) {
+        objects.push(content);
+        return objects.length;
+      }
+
+      const pageObjectIds = [];
+
+      pages.forEach((page, index) => {
+        const imageHex = uint8ArrayToHex(dataUrlToUint8Array(page.image));
+        const imageObjectId = addObject(
+          `<< /Type /XObject /Subtype /Image /Width ${PAGE_EXPORT_WIDTH} /Height ${PAGE_EXPORT_HEIGHT} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter [/ASCIIHexDecode /DCTDecode] /Length ${imageHex.length} >>\nstream\n${imageHex}\nendstream`
+        );
+
+        const contentStream = `q\n${PDF_PAGE_WIDTH} 0 0 ${PDF_PAGE_HEIGHT} 0 0 cm\n/Im${index + 1} Do\nQ`;
+        const contentObjectId = addObject(
+          `<< /Length ${contentStream.length} >>\nstream\n${contentStream}\nendstream`
+        );
+
+        const pageObjectId = addObject(
+          `<< /Type /Page /Parent 0 0 R /MediaBox [0 0 ${PDF_PAGE_WIDTH} ${PDF_PAGE_HEIGHT}] /Resources << /XObject << /Im${index + 1} ${imageObjectId} 0 R >> >> /Contents ${contentObjectId} 0 R >>`
+        );
+        pageObjectIds.push(pageObjectId);
+      });
+
+      const pagesObjectId = addObject(
+        `<< /Type /Pages /Count ${pageObjectIds.length} /Kids [${pageObjectIds.map((id) => `${id} 0 R`).join(" ")}] >>`
+      );
+
+      pageObjectIds.forEach((pageObjectId) => {
+        objects[pageObjectId - 1] = objects[pageObjectId - 1].replace("/Parent 0 0 R", `/Parent ${pagesObjectId} 0 R`);
+      });
+
+      const infoText = `Zine Machine booklet exported ${new Date().toISOString()}`;
+      const infoObjectId = addObject(`<< /Producer (${escapePdfString("Zine Machine")}) /Title (${escapePdfString(infoText)}) >>`);
+      const catalogObjectId = addObject(`<< /Type /Catalog /Pages ${pagesObjectId} 0 R >>`);
+
+      const encoder = new TextEncoder();
+      const chunks = [];
+      const offsets = [0];
+      let position = 0;
+
+      function pushChunk(chunk) {
+        if (chunk instanceof Uint8Array) {
+          chunks.push(chunk);
+          position += chunk.length;
+          return;
+        }
+
+        const encoded = encoder.encode(chunk);
+        chunks.push(encoded);
+        position += encoded.length;
+      }
+
+      pushChunk("%PDF-1.3\n");
+
+      objects.forEach((content, objectIndex) => {
+        offsets.push(position);
+        pushChunk(`${objectIndex + 1} 0 obj\n`);
+
+        if (typeof content === "string") {
+          pushChunk(content);
+        } else {
+          pushChunk(content);
+        }
+
+        pushChunk("\nendobj\n");
+      });
+
+      const xrefOffset = position;
+      pushChunk(`xref\n0 ${objects.length + 1}\n`);
+      pushChunk("0000000000 65535 f \n");
+
+      for (let i = 1; i <= objects.length; i += 1) {
+        pushChunk(`${String(offsets[i]).padStart(10, "0")} 00000 n \n`);
+      }
+
+      pushChunk(
+        `trailer\n<< /Size ${objects.length + 1} /Root ${catalogObjectId} 0 R /Info ${infoObjectId} 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`
+      );
+
+      return new Blob(chunks, { type: "application/pdf" });
+    }
+
+    async function downloadBooklet() {
+      const filledPages = zineState.pages.filter((page) => page.image);
+      if (filledPages.length === 0) {
+        status.textContent = "Capture at least one page before exporting.";
+        return;
+      }
+
+      const exportPages = zineState.pages.map((page, index) => ({
+        image: page.image || createPlaceholderPage(index)
+      }));
+
+      try {
+        const pdfBlob = buildPdf(exportPages);
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement("a");
+        link.download = "zine-machine-booklet.pdf";
+        link.href = url;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        status.textContent = "Booklet PDF downloaded.";
+      } catch (error) {
+        console.error(error);
+        status.textContent = "PDF export failed. Saving page PNGs instead.";
+        exportPages.forEach((page, index) => {
+          const link = document.createElement("a");
+          link.download = `zine-machine-page-${String(index + 1).padStart(2, "0")}.jpg`;
+          link.href = page.image;
+          link.click();
+        });
+      }
+    }
+
+    function createPlaceholderPage(index) {
+      pageBuffer.width = PAGE_EXPORT_WIDTH;
+      pageBuffer.height = PAGE_EXPORT_HEIGHT;
+      pageCtx.clearRect(0, 0, PAGE_EXPORT_WIDTH, PAGE_EXPORT_HEIGHT);
+      pageCtx.fillStyle = "#f2f2f2";
+      pageCtx.fillRect(0, 0, PAGE_EXPORT_WIDTH, PAGE_EXPORT_HEIGHT);
+      pageCtx.strokeStyle = "#777";
+      pageCtx.setLineDash([20, 14]);
+      pageCtx.lineWidth = 6;
+      pageCtx.strokeRect(60, 60, PAGE_EXPORT_WIDTH - 120, PAGE_EXPORT_HEIGHT - 120);
+      pageCtx.setLineDash([]);
+      pageCtx.fillStyle = "#333";
+      pageCtx.textAlign = "center";
+      pageCtx.font = 'bold 58px "Courier New", Courier, monospace';
+      pageCtx.fillText(PAGE_LABELS[index], PAGE_EXPORT_WIDTH / 2, PAGE_EXPORT_HEIGHT / 2 - 20);
+      pageCtx.font = '30px "Courier New", Courier, monospace';
+      pageCtx.fillText("Blank page", PAGE_EXPORT_WIDTH / 2, PAGE_EXPORT_HEIGHT / 2 + 48);
+      return pageBuffer.toDataURL("image/jpeg", 0.9);
+    }
+
+    // localStorage persistence
+    function persistState() {
+      try {
+        const payload = {
+          pages: zineState.pages,
+          selectedPageIndex: zineState.selectedPageIndex,
+          manualTargetIndex: zineState.manualTargetIndex,
+          controlsCollapsed: zineState.controlsCollapsed,
+          settings: getSettingsSnapshot()
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      } catch (error) {
+        console.warn("Unable to persist zine state.", error);
+      }
+    }
+
+    function restoreState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const payload = JSON.parse(raw);
+
+        if (Array.isArray(payload.pages) && payload.pages.length === PAGE_LABELS.length) {
+          zineState.pages = payload.pages.map((page) => ({
+            image: page && page.image ? page.image : null,
+            createdAt: page && page.createdAt ? page.createdAt : null
+          }));
+        }
+
+        if (Number.isInteger(payload.selectedPageIndex)) {
+          zineState.selectedPageIndex = Math.min(Math.max(payload.selectedPageIndex, 0), PAGE_LABELS.length - 1);
+        }
+
+        if (payload.manualTargetIndex === null || Number.isInteger(payload.manualTargetIndex)) {
+          zineState.manualTargetIndex = payload.manualTargetIndex;
+        }
+
+        if (typeof payload.controlsCollapsed === "boolean") {
+          zineState.controlsCollapsed = payload.controlsCollapsed;
+        }
+
+        applySettingsSnapshot(payload.settings);
+      } catch (error) {
+        console.warn("Unable to restore zine state.", error);
+      }
+    }
+
+    document.getElementById("captureBtn").addEventListener("click", capturePage);
+    document.getElementById("downloadBtn").addEventListener("click", downloadBooklet);
+    clearPageBtn.addEventListener("click", clearSelectedPage);
+    resetBtn.addEventListener("click", resetBooklet);
+    toggleControlsBtn.addEventListener("click", () => {
+      setControlsCollapsed(!zineState.controlsCollapsed);
+    });
+
+    window.addEventListener("resize", fitCanvases);
+    window.addEventListener("beforeunload", stopCamera);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden && dragState) {
+        dragState = null;
+      }
+    });
+
+    restoreState();
+    syncLabels();
+    fitCanvases();
+    renderBookletUI();
+    startCamera();
+  </script>
+</body>
+</html>
