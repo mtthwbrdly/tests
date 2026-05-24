@@ -14,8 +14,10 @@
       --stamp-font-weight: bold;
       --stamp-font-family: "Courier New", Courier, monospace;
       --stamp-size-scale: 0.01;
-      --panel-bg: linear-gradient(180deg, #fcfcfc 0%, #d6d6d6 100%);
-      --button-bg: linear-gradient(180deg, #ffffff 0%, #bdbdbd 100%);
+      --booklet-width: 320px;
+      --booklet-tab-width: 42px;
+      --panel-bg: white;
+      --button-bg: white;
       --button-active: linear-gradient(180deg, #bdbdbd 0%, #ffffff 100%);
       --line: #7b7b7b;
       --paper: #efefef;
@@ -70,13 +72,11 @@
       font-weight: bold;
       letter-spacing: -0.06rem;
       color: #fff;
-      text-transform: uppercase;
     }
 
 
     .workspace {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 320px;
+      position: relative;
       min-height: 100vh;
     }
 
@@ -88,11 +88,12 @@
 
     .viewer {
       position: fixed;
-      inset: 0 320px 0 0;
-      width: auto;
+      inset: 0 var(--booklet-width) 0 0;
+      width: 100%;
       overflow: hidden;
       background: #000;
       touch-action: manipulation;
+      transition: inset 180ms ease;
     }
 
     video {
@@ -152,53 +153,68 @@
       display: none;
     }
 
-    .capture-hud {
-      padding: 12px 14px;
-      border: 1px solid #8e8e8e;
-      border-radius: 0px;
-      background: rgba(255, 255, 255, 0.84);
-      font-family: "Courier New", Courier, monospace;
-    }
-
-    .capture-line {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      font-size: 12px;
-      text-transform: uppercase;
-    }
-
-    .capture-line strong {
-      font-size: 12px;
-      line-height: 1.1;
-      text-transform: none;
-    }
-
-    .capture-note {
-      margin-top: 6px;
-      font-size: 11px;
-      color: #3d3d3d;
-    }
-
     .booklet-panel {
-      position: relative;
+      position: fixed;
+      top: 0;
+      right: 0;
       z-index: 10;
-      margin-left: auto;
-      width: 320px;
+      width: var(--booklet-width);
       min-height: 100vh;
       max-height: 100vh;
-      overflow-y: auto;
-      padding: 16px;
+      overflow: visible;
       border-left: 1px solid var(--line);
       background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent 80px),
         var(--panel-bg);
       box-shadow: inset 8px 0 18px rgba(255, 255, 255, 0.1);
+      font-family: "Courier New", Courier, monospace;
+      font-size: 12px;
+      transition: transform 180ms ease;
+    }
+
+    .booklet-panel-scroll {
+      max-height: 100vh;
+      overflow-y: auto;
+      padding: 16px;
       display: grid;
       gap: 14px;
       align-content: start;
-      font-family: "Courier New", Courier, monospace;
-      font-size: 12px;
+    }
+
+    .page.is-booklet-collapsed .viewer {
+      inset: 0 var(--booklet-tab-width) 0 0;
+    }
+
+    .page.is-booklet-collapsed .booklet-panel {
+      transform: translateX(calc(var(--booklet-width)));
+    }
+
+    .booklet-toggle-tab {
+      position: absolute;
+      top: 0%;
+      left: calc(-1 * var(--booklet-tab-width));
+      width: var(--booklet-tab-width);
+      min-height: 148px;
+      padding: 12px 8px;
+      border-right: 0;
+      background: var(--panel-bg);
+      color: var(--ink);
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      letter-spacing: 0.08em;
+      font-size: 0.85rem;
+      line-height: 1;
+      text-transform: uppercase;
+      box-shadow: -8px 0 18px rgba(0, 0, 0, 0.12);
+    }
+
+    .booklet-toggle-tab span {
+      display: inline-block;
+      transform: rotate(180deg);
+    }
+
+    .booklet-toggle-tab:hover {
+      background: #f2f2f2;
     }
 
     .control-panel {
@@ -248,7 +264,7 @@
 
     .control-panel-header #captureBtn {
       min-height: 34px;
-      width: auto;
+      width: 100%;
       padding: 7px 16px;
       font-size: 1rem;
     }
@@ -269,7 +285,6 @@
       border-bottom: 1px dashed #9f9f9f;
       font-size: clamp(28px, 5vw, 40px);
       letter-spacing: -0.025em;
-      text-transform: uppercase;
       font-family: "Arial Narrow", Arial, sans-serif;
     }
 
@@ -287,17 +302,17 @@
     button {
       min-height: 44px;
       padding: 10px 12px;
-      border: 1px solid var(--ink);
+      border: none;
       border-radius: 0px;
       background: var(--button-bg);
       color: var(--ink);
       cursor: pointer;
-      text-transform: uppercase;
       font-family: "Arial Narrow", Arial, sans-serif;
       font-weight: bold;
       font-size: 1.25rem;
       line-height: 1;
       letter-spacing: 0.02em;
+      border: 1px dott black;
     }
 
     button:active {
@@ -313,6 +328,19 @@
       background: #ff0000;
       color: #fff;
       width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    #captureBtn span {
+      display: block;
+    }
+
+    #captureTargetText {
+      font-size: 0.85rem;
+      letter-spacing: 0.06em;
     }
 
     #downloadBtn {
@@ -333,7 +361,6 @@
       padding-bottom: 9px;
       border-bottom: 1px dashed #a5a5a5;
       font-size: 12px;
-      text-transform: uppercase;
     }
 
     .control input[type="range"] {
@@ -398,7 +425,7 @@
 
     .thumb {
       position: relative;
-      background: linear-gradient(180deg, #f5f5f5, #d0d0d0);
+      background: white;
       border-radius: 0px;
       padding: 8px;
       display: grid;
@@ -424,7 +451,6 @@
       color: #fff;
       font-size: 10px;
       letter-spacing: 0.08em;
-      text-transform: uppercase;
     }
 
     .thumb.is-dragging {
@@ -436,8 +462,7 @@
       aspect-ratio: 1 / 1.4142;
       border: 1px dashed #858585;
       overflow: hidden;
-      background:
-        linear-gradient(180deg, #fbfbfb, #e9e9e9);
+      background:white;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -456,7 +481,6 @@
       text-align: center;
       color: #5f5f5f;
       font-size: 11px;
-      text-transform: uppercase;
       letter-spacing: 0.06em;
     }
 
@@ -467,7 +491,6 @@
 
     .thumb-index {
       font-size: 10px;
-      text-transform: uppercase;
       color: #616161;
     }
 
@@ -481,52 +504,6 @@
     .thumb-note {
       font-size: 10px;
       color: #5b5b5b;
-      text-transform: uppercase;
-    }
-
-    .preview-card {
-      display: grid;
-      gap: 10px;
-      padding: 10px;
-      border: 1px solid #7d7d7d;
-      border-radius: 0px;
-      background: rgba(255, 255, 255, 0.45);
-    }
-
-    .preview-canvas {
-      aspect-ratio: 1 / 1.4142;
-      border: 1px dashed #7d7d7d;
-      background: var(--paper);
-      overflow: hidden;
-    }
-
-    .preview-canvas img {
-      width: 100%;
-      height: 100%;
-      display: block;
-      object-fit: cover;
-    }
-
-    .preview-empty {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 18px;
-      color: #636363;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .meta-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      font-size: 11px;
-      text-transform: uppercase;
     }
 
     .hidden-buffer {
@@ -539,7 +516,7 @@
       }
 
       .workspace {
-        grid-template-columns: 1fr;
+        min-height: 100vh;
       }
 
       .viewer-shell {
@@ -547,20 +524,19 @@
       }
 
       .viewer {
-        position: relative;
-        inset: auto;
-        width: 100%;
-        min-height: 100vh;
+        inset: 0 min(320px, calc(100vw - 24px)) 0 0;
       }
 
       .booklet-panel {
-        width: 100%;
-        min-height: auto;
-        max-height: none;
-        border-left: 0;
-        border-top: 1px solid var(--line);
-        margin-left: 0;
-        padding-top: 14px;
+        width: min(320px, calc(100vw - 24px));
+      }
+
+      .page.is-booklet-collapsed .booklet-panel {
+        transform: translateX(calc(min(320px, calc(100vw - 24px)) - var(--booklet-tab-width)));
+      }
+
+      .page.is-booklet-collapsed .viewer {
+        inset: 0 var(--booklet-tab-width) 0 0;
       }
 
       .control-panel {
@@ -579,18 +555,17 @@
         font-size: 10px;
       }
 
-      .booklet-panel {
+      .booklet-panel-scroll {
         padding: 12px;
+      }
+
+      .booklet-toggle-tab {
+        min-height: 132px;
       }
 
       .buttons,
       .booklet-tools {
        display: flex;
-      }
-
-      .capture-line {
-        flex-direction: column;
-        gap: 4px;
       }
 
       .control-panel {
@@ -617,31 +592,17 @@
 
       </div>
 
-      <aside class="booklet-panel">
-
-
-                      <section>
-          <h2 class="section-title">ZINE MAKER</h2>
-          </div>
-          
-        </section>
-
-        <section class="preview-card">
-          <div class="meta-row">
-            <span id="selectedPageIndex">Page 1</span>
-            <span id="selectedPageMode">Auto target</span>
-          </div>
-          <div class="preview-canvas" id="selectedPreview"></div>
-          <div class="meta-row">
-            <span id="selectedPageLabel">Front Cover</span>
-            <span id="pageFillCount">0 / 8 filled</span>
-          </div>
-        </section>
-
-
-
+      <aside class="booklet-panel" id="bookletPanel">
+        <button
+          id="toggleBookletBtn"
+          class="booklet-toggle-tab"
+          type="button"
+          aria-expanded="true"
+          aria-controls="thumbGrid"
+        ><span>Hide</span></button>
+        <div class="booklet-panel-scroll">
         <section class="booklet">
-          <h2 class="section-title">Pages</h2>
+          <h2 class="section-title">Zine Pages</h2>
           <div class="thumb-grid" id="thumbGrid" aria-label="Booklet pages"></div>
         </section>
 
@@ -656,29 +617,19 @@
           </div>
           
         </section>
+        </div>
       </aside>
 
       <aside class="control-panel" id="controlPanel">
         <div class="control-panel-header">
           <div class="control-panel-actions">
-            <button id="captureBtn">SCAN</button>
+            <button id="captureBtn"><span>SCAN</span><span id="captureTargetText">1/8</span></button>
           </div>
           
           <button id="toggleControlsBtn" class="control-panel-toggle" type="button" aria-expanded="true">Collapse</button>
         
         </div>
         <div class="control-panel-body">
-          <section class="capture-hud" aria-live="polite">
-            <div class="capture-line">
-              <span>Capturing</span>
-              <span id="captureTargetText">Page 1 of 8</span>
-            </div>
-            <div class="capture-note" id="captureTargetNote">
-              Front Cover is next in sequence.
-            </div>
-            
-
-          </section>
 <div class="status" id="status">Requesting camera access. Use HTTPS or localhost if prompted.</div>
           <section class="controls">
             <h2 class="section-title">Settings</h2>
@@ -770,18 +721,15 @@
 
     const viewer = document.getElementById("viewer");
     const status = document.getElementById("status");
+    const page = document.querySelector(".page");
+    const bookletPanel = document.getElementById("bookletPanel");
+    const toggleBookletBtn = document.getElementById("toggleBookletBtn");
     const controlPanel = document.getElementById("controlPanel");
     const toggleControlsBtn = document.getElementById("toggleControlsBtn");
     const guideFrame = document.getElementById("guideFrame");
     const dateStamp = document.getElementById("dateStamp");
     const thumbGrid = document.getElementById("thumbGrid");
-    const selectedPreview = document.getElementById("selectedPreview");
-    const selectedPageIndex = document.getElementById("selectedPageIndex");
-    const selectedPageLabel = document.getElementById("selectedPageLabel");
-    const selectedPageMode = document.getElementById("selectedPageMode");
-    const pageFillCount = document.getElementById("pageFillCount");
     const captureTargetText = document.getElementById("captureTargetText");
-    const captureTargetNote = document.getElementById("captureTargetNote");
     const clearPageBtn = document.getElementById("clearPageBtn");
     const resetBtn = document.getElementById("resetBtn");
 
@@ -815,6 +763,7 @@
       pages: PAGE_LABELS.map(() => ({ image: null, createdAt: null })),
       selectedPageIndex: 0,
       manualTargetIndex: null,
+      bookletCollapsed: false,
       controlsCollapsed: false
     };
 
@@ -835,6 +784,20 @@
       guideFrame.classList.toggle("is-visible", controls.guides.checked);
       persistState();
       renderBookletUI();
+    }
+
+    function updateBookletPanelUI() {
+      page.classList.toggle("is-booklet-collapsed", zineState.bookletCollapsed);
+      bookletPanel.setAttribute("aria-hidden", String(zineState.bookletCollapsed));
+      toggleBookletBtn.setAttribute("aria-expanded", String(!zineState.bookletCollapsed));
+      toggleBookletBtn.innerHTML = `<span>${zineState.bookletCollapsed ? "PAGES" : "Hide"}</span>`;
+      fitCanvases();
+    }
+
+    function setBookletCollapsed(collapsed) {
+      zineState.bookletCollapsed = collapsed;
+      updateBookletPanelUI();
+      persistState();
     }
 
     function updateControlPanelUI() {
@@ -1155,30 +1118,8 @@
     }
 
     // thumbnail rendering
-    function renderSelectedPreview() {
-      const page = zineState.pages[zineState.selectedPageIndex];
-      selectedPreview.innerHTML = "";
-
-      if (page.image) {
-        const img = document.createElement("img");
-        img.src = page.image;
-        img.alt = PAGE_LABELS[zineState.selectedPageIndex];
-        selectedPreview.appendChild(img);
-      } else {
-        const placeholder = document.createElement("div");
-        placeholder.className = "preview-empty";
-        placeholder.textContent = "Selected page is empty";
-        selectedPreview.appendChild(placeholder);
-      }
-    }
-
-    function getFilledCount() {
-      return zineState.pages.filter((page) => page.image).length;
-    }
-
     function renderBookletUI() {
       const targetIndex = getCaptureTargetIndex();
-      const filledCount = getFilledCount();
 
       thumbGrid.innerHTML = "";
 
@@ -1234,15 +1175,10 @@
         thumbGrid.appendChild(row);
       });
 
-      selectedPageIndex.textContent = `Page ${zineState.selectedPageIndex + 1}`;
-      selectedPageLabel.textContent = PAGE_LABELS[zineState.selectedPageIndex];
-      selectedPageMode.textContent = zineState.manualTargetIndex === null ? "Auto target" : "Manual target";
-      pageFillCount.textContent = `${filledCount} / 8 filled`;
-      captureTargetText.textContent = `Page ${targetIndex + 1} of 8`;
-      captureTargetNote.textContent = `${PAGE_LABELS[targetIndex]} is ${zineState.manualTargetIndex === null ? "next in sequence" : "armed for replacement"}.`;
+      captureTargetText.textContent = `${targetIndex + 1}/8`;
 
       clearPageBtn.disabled = !zineState.pages[zineState.selectedPageIndex].image;
-      renderSelectedPreview();
+      updateBookletPanelUI();
       updateControlPanelUI();
     }
 
@@ -1509,6 +1445,7 @@
           pages: zineState.pages,
           selectedPageIndex: zineState.selectedPageIndex,
           manualTargetIndex: zineState.manualTargetIndex,
+          bookletCollapsed: zineState.bookletCollapsed,
           controlsCollapsed: zineState.controlsCollapsed,
           settings: getSettingsSnapshot()
         };
@@ -1539,6 +1476,10 @@
           zineState.manualTargetIndex = payload.manualTargetIndex;
         }
 
+        if (typeof payload.bookletCollapsed === "boolean") {
+          zineState.bookletCollapsed = payload.bookletCollapsed;
+        }
+
         if (typeof payload.controlsCollapsed === "boolean") {
           zineState.controlsCollapsed = payload.controlsCollapsed;
         }
@@ -1553,6 +1494,9 @@
     document.getElementById("downloadBtn").addEventListener("click", downloadBooklet);
     clearPageBtn.addEventListener("click", clearSelectedPage);
     resetBtn.addEventListener("click", resetBooklet);
+    toggleBookletBtn.addEventListener("click", () => {
+      setBookletCollapsed(!zineState.bookletCollapsed);
+    });
     toggleControlsBtn.addEventListener("click", () => {
       setControlsCollapsed(!zineState.controlsCollapsed);
     });
