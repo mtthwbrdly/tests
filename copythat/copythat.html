@@ -451,7 +451,7 @@
       display: grid;
       gap: 8px;
       user-select: none;
-      touch-action: none;
+      touch-action: manipulation;
       box-shadow: 0 5px 14px rgba(0, 0, 0, 0.08);
     }
 
@@ -471,11 +471,6 @@
       color: #fff;
       font-size: 10px;
       letter-spacing: 0.08em;
-    }
-
-    .thumb.is-dragging {
-      opacity: 0.55;
-      transform: scale(0.98);
     }
 
     .thumb-figure {
@@ -816,7 +811,6 @@
 
     let stream = null;
     let animationId = null;
-    let dragState = null;
 
     // zine state
     const zineState = {
@@ -1228,7 +1222,6 @@
           item.appendChild(figure);
           item.appendChild(meta);
           item.addEventListener("click", () => setSelectedPage(index, { manual: true }));
-          attachDragHandlers(item, index);
           row.appendChild(item);
         });
 
@@ -1267,74 +1260,6 @@
       renderBookletUI();
       persistState();
       status.textContent = "Booklet reset. Front Cover is ready for capture.";
-    }
-
-    function movePage(fromIndex, toIndex) {
-      if (fromIndex === toIndex || toIndex < 0 || toIndex >= zineState.pages.length) {
-        return;
-      }
-
-      const [page] = zineState.pages.splice(fromIndex, 1);
-      zineState.pages.splice(toIndex, 0, page);
-
-      if (zineState.selectedPageIndex === fromIndex) {
-        zineState.selectedPageIndex = toIndex;
-      } else if (fromIndex < zineState.selectedPageIndex && toIndex >= zineState.selectedPageIndex) {
-        zineState.selectedPageIndex -= 1;
-      } else if (fromIndex > zineState.selectedPageIndex && toIndex <= zineState.selectedPageIndex) {
-        zineState.selectedPageIndex += 1;
-      }
-
-      if (zineState.manualTargetIndex === fromIndex) {
-        zineState.manualTargetIndex = toIndex;
-      } else if (zineState.manualTargetIndex !== null) {
-        if (fromIndex < zineState.manualTargetIndex && toIndex >= zineState.manualTargetIndex) {
-          zineState.manualTargetIndex -= 1;
-        } else if (fromIndex > zineState.manualTargetIndex && toIndex <= zineState.manualTargetIndex) {
-          zineState.manualTargetIndex += 1;
-        }
-      }
-
-      renderBookletUI();
-      persistState();
-      status.textContent = "Booklet order updated for export.";
-    }
-
-    // drag-and-drop reorder
-    function attachDragHandlers(element, index) {
-      element.addEventListener("pointerdown", (event) => {
-        dragState = {
-          pointerId: event.pointerId,
-          startIndex: index,
-          activeIndex: index
-        };
-
-        element.setPointerCapture(event.pointerId);
-        element.classList.add("is-dragging");
-      });
-
-      element.addEventListener("pointermove", (event) => {
-        if (!dragState || dragState.pointerId !== event.pointerId) return;
-        const target = document.elementFromPoint(event.clientX, event.clientY);
-        const thumb = target && target.closest(".thumb");
-        if (!thumb) return;
-        const overIndex = Number(thumb.dataset.index);
-        if (!Number.isNaN(overIndex)) {
-          dragState.activeIndex = overIndex;
-        }
-      });
-
-      function finishDrag(event) {
-        if (!dragState || dragState.pointerId !== event.pointerId) return;
-        element.classList.remove("is-dragging");
-        element.releasePointerCapture(event.pointerId);
-        const { startIndex, activeIndex } = dragState;
-        dragState = null;
-        movePage(startIndex, activeIndex);
-      }
-
-      element.addEventListener("pointerup", finishDrag);
-      element.addEventListener("pointercancel", finishDrag);
     }
 
     // export logic
@@ -1566,11 +1491,6 @@
 
     window.addEventListener("resize", fitCanvases);
     window.addEventListener("beforeunload", stopCamera);
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden && dragState) {
-        dragState = null;
-      }
-    });
 
     restoreState();
     syncLabels();
