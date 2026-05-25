@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Zine Machine</title>
+  <title>Copy That</title>
   <style>
     * {
       box-sizing: border-box;
@@ -280,11 +280,32 @@
 
     .section-title {
       margin: 0 0 8px;
-      padding-bottom: 8px;
-      border-bottom: 1px dashed #9f9f9f;
+      padding: 8px;
       font-size: clamp(28px, 5vw, 40px);
       letter-spacing: -0.025em;
       font-family: "Arial Narrow", Arial, sans-serif;
+    }
+
+    .booklet-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .booklet-header .section-title {
+      flex: 1;
+    }
+
+    .booklet-mobile-close {
+      display: none;
+      min-height: 0;
+      padding: 6px 0 8px;
+      border: 0;
+      background: transparent;
+      font-size: 14px;
+      line-height: 1;
+      text-transform: uppercase;
     }
 
     .buttons {
@@ -527,11 +548,12 @@
       }
 
       .booklet-panel {
-        width: min(320px, calc(100vw - 24px));
+        width: 100%;
+        z-index: 999;
       }
 
       .page.is-booklet-collapsed .booklet-panel {
-        transform: translateX(calc(min(320px, calc(100vw - 24px)) - var(--booklet-tab-width)));
+        transform: translateX(calc(min(320px, calc(100vw - 24px))));
       }
 
       .page.is-booklet-collapsed .viewer {
@@ -555,11 +577,46 @@
       }
 
       .booklet-panel-scroll {
+        height: 100svh;
         padding: 12px;
       }
 
       .booklet-toggle-tab {
         min-height: 132px;
+      }
+
+      .viewer {
+        inset: 0;
+      }
+
+      .booklet-panel {
+        left: 0;
+        right: 0;
+        width: 100vw;
+        min-height: 100svh;
+        max-height: 100svh;
+        border-left: 0;
+        box-shadow: none;
+      }
+
+      .page.is-booklet-collapsed .booklet-panel {
+        transform: translateX(calc(100vw));
+      }
+
+      .page.is-booklet-collapsed .viewer {
+        inset: 0;
+      }
+
+      .booklet-header {
+        align-items: center;
+        border-bottom: 1px dashed #9f9f9f;
+      }
+
+      .booklet-mobile-close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
       }
 
       .buttons,
@@ -601,7 +658,10 @@
         ><span>Hide</span></button>
         <div class="booklet-panel-scroll">
         <section class="booklet">
-          <h2 class="section-title">Zine Pages</h2>
+          <div class="booklet-header">
+            <h2 class="section-title">Zine Pages</h2>
+            <button id="closeBookletBtn" class="booklet-mobile-close" type="button" aria-label="Close zine pages">Close</button>
+          </div>
           <div class="thumb-grid" id="thumbGrid" aria-label="Booklet pages"></div>
         </section>
 
@@ -723,6 +783,7 @@
     const page = document.querySelector(".page");
     const bookletPanel = document.getElementById("bookletPanel");
     const toggleBookletBtn = document.getElementById("toggleBookletBtn");
+    const closeBookletBtn = document.getElementById("closeBookletBtn");
     const controlPanel = document.getElementById("controlPanel");
     const toggleControlsBtn = document.getElementById("toggleControlsBtn");
     const guideFrame = document.getElementById("guideFrame");
@@ -1495,6 +1556,9 @@
     resetBtn.addEventListener("click", resetBooklet);
     toggleBookletBtn.addEventListener("click", () => {
       setBookletCollapsed(!zineState.bookletCollapsed);
+    });
+    closeBookletBtn.addEventListener("click", () => {
+      setBookletCollapsed(true);
     });
     toggleControlsBtn.addEventListener("click", () => {
       setControlsCollapsed(!zineState.controlsCollapsed);
